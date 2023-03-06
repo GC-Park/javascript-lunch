@@ -1,6 +1,5 @@
-import { RestaurantList } from "../domain/RestaurantList";
-import RestaurantRegistry from "./RestaurantRegistry";
 import { $, $$ } from "../utils/Dom";
+import { CATEGORY, DISTANCE, INFORMATION_RESTAURANT} from "../utils/Constant"
 
 export default class Modal {
   #template = `
@@ -68,29 +67,51 @@ export default class Modal {
     `;
 
   constructor(restaurantList, restaurantRegistry) {
-    document.body.insertAdjacentHTML("beforeend", this.#template);
     this.restaurantList = restaurantList;
+    this.restaurantRegistry = restaurantRegistry;
+  }
+
+  render() {
+    document.body.insertAdjacentHTML("beforeend", this.#template);
+  }
+
+  initializeButtonEvents() {
     this.modalForm = $(".modal-form");
     this.modalForm.addEventListener("submit", (event) => {
       event.preventDefault();
       this.addRestaurant();
     });
-    this.restaurantRegistry = restaurantRegistry;
+
     $(".button--secondary").addEventListener("click", this.closeModal);
   }
 
   addRestaurant() {
+    const restaurantInfo = this.setRestaurantInformation();
+
+    this.restaurantList.add(restaurantInfo);
+    const foodCategory = localStorage.getItem("foodCategory") ?? "전체";
+    const sortBy = localStorage.getItem("sort") ?? "name";
+    this.restaurantRegistry.appendRestaurant(
+      this.restaurantList.listRestaurant[this.getRestaurantLength()]
+    );
+    this.restaurantList.filterCategory(foodCategory);
+    this.restaurantList.filterBySort(sortBy, foodCategory);
+    this.closeModal();
+  }
+
+  setRestaurantInformation() {
     const restaurantInfo = {};
     const array = ["category", "name", "distance", "description", "link"];
+
     $$(".form-item").forEach((val, index) => {
       restaurantInfo[array[index]] = val.children[1].value;
     });
-    this.restaurantList.add(restaurantInfo);
-    const restaurantLength = this.restaurantList.listRestaurant.length - 1;
-    this.restaurantRegistry.appendRestaurant(
-      this.restaurantList.listRestaurant[restaurantLength]
-    );
-    this.closeModal();
+
+    return restaurantInfo;
+  }
+
+  getRestaurantLength() {
+    return this.restaurantList.listRestaurant.length - 1;
   }
 
   closeModal = () => {
@@ -100,11 +121,12 @@ export default class Modal {
 
   resetValue() {
     $$(".form-item").forEach((val, index) => {
-      if (index === 0 || index === 2) {
-        val.children[1].value = "";
+      if (index === CATEGORY || index === DISTANCE) {
+        val.children[INFORMATION_RESTAURANT].value = "";
         return;
       }
-      val.children[1].value = null;
+
+      val.children[INFORMATION_RESTAURANT].value = null;
     });
   }
 }
